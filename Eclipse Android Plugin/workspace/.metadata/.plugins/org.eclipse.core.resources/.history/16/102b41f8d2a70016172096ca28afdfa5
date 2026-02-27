@@ -1,0 +1,154 @@
+package com.purpletalk.MNR;
+
+import java.util.Currency;
+import java.util.List;
+import java.util.Locale;
+import android.app.Activity;
+import android.app.ActivityManager;
+import android.app.ActivityManager.RunningServiceInfo;
+import android.content.Context;
+import android.os.Bundle;
+import android.util.DisplayMetrics;
+import android.util.Log;
+import com.unity3d.player.UnityPlayer;
+
+public class MainActivity
+{
+	public static void onCreate (Bundle savedInstanceState) 
+	{
+		MainActivity.SetOrientation ();
+		getCountryName();
+    }
+	
+    private static void SetOrientation ()
+    {
+        Activity mActivity = UnityPlayer.currentActivity;
+       
+        if (MainActivity.isTablet (mActivity))
+        {
+            mActivity.setRequestedOrientation (0);
+            Log.i("Birla", ">>>>>>>>>> Orientation changed to SCREEN_ORIENTATION_LANDSCAPE <<<<<<<<<<");
+        }
+        else 
+        {
+            mActivity.setRequestedOrientation (1);
+            Log.i("Birla", ">>>>>>>>>> Orientation changed to SCREEN_ORIENTATION_PORTRAIT <<<<<<<<<<");
+        }
+    }
+    
+    private static Boolean isTablet (Activity activity)
+    {
+        try 
+        {
+            DisplayMetrics displayMetrics = new DisplayMetrics ();
+            activity.getWindowManager ().getDefaultDisplay ().getMetrics (displayMetrics);
+            double width = (double) displayMetrics.widthPixels;
+            double height = (double) displayMetrics.heightPixels;
+            double xDensity = (double) displayMetrics.xdpi;
+            double yDensity = (double) displayMetrics.ydpi;
+            double w = width / xDensity;
+            double h = height / yDensity;
+            double x = Math.pow (w, 2.0);
+            double y = Math.pow (h, 2.0);
+            double screenInches = Math.sqrt (x + y);
+            
+            Log.i("Birla", ">>>>>>>>>> Screen size (inches): " + Double.toString(screenInches) + " <<<<<<<<<<");
+            
+            if (screenInches > 6.0)
+            {
+                return true;
+            }
+            
+            return false;
+        }
+        catch (Exception e) 
+        {
+            return false;
+        }
+    }
+    
+ // Get Country Name  // Govinda Rajulu Yella Apr-14-2016
+    public static void getCountryName() {
+    	String country = UnityPlayer.currentActivity.getResources().getConfiguration().locale.getDisplayCountry();
+    	Log.i("country", ">>>>>>>>>> countryName <<<<<<<<<< : " + country);
+    	UnityPlayer.UnitySendMessage("SoundManager","CountryCode",country);
+    	Locale templocale = Locale.getDefault();
+    	Currency currency = Currency.getInstance(templocale);
+    	String currencyCode = currency.getDisplayName(templocale);
+    	Log.i("country", ">>>>>>>>>> currencyCode <<<<<<<<<< : " + currencyCode);
+    	UnityPlayer.UnitySendMessage("SoundManager","CurrencyCode",currencyCode);
+    }
+    
+    // Device Sound Test Region  // Govinda Rajulu Yella Feb-10-2016
+    public static void onWindowFocusChanged(boolean hasFocus) {
+    	checkNotificationDrag(hasFocus);
+		Log.i("Audio", ">>>>>>>>>> onWindowFocusChangedNew <<<<<<<<<< : " + hasFocus);
+		if(hasFocus) {
+			checkAudioIsPlaying("SoundManager","setAudioStateByNative");
+		}
+	}
+    
+    public static void checkNotificationDrag(boolean hasFocus) {
+    	if(hasFocus)
+    		UnityPlayer.UnitySendMessage("SocialKinesis","checkNotificationDragPause","false");
+    	else {
+    		UnityPlayer.UnitySendMessage("SocialKinesis","checkNotificationDragPause","true");
+    	}
+    }
+   
+    // Device Sound Test Region  // Govinda Rajulu Yella Feb-10-2016
+    public static void checkAudioIsPlaying(String gameObject,String methodName) 
+    {
+    	try 
+        {	
+    		CharSequence cs1 = "playbackservice";
+	    	CharSequence cs2 = "mediaplaybackservice";
+	    	CharSequence cs3 = "musicplaybackservice";
+	    	ActivityManager am= (ActivityManager) UnityPlayer.currentActivity.getSystemService(Context.ACTIVITY_SERVICE);   
+	    	List<RunningServiceInfo> serviceInfo = am.getRunningServices(75);
+	    	if(gameObject.equals("log"))
+	    		Log.i("Audio", ">>>>>>>>>> Service List Goes here <<<<<<<<<<");
+	    	String tempServiceName = "";
+	    	RunningServiceInfo rti;
+	    	for (int j = 0; j < serviceInfo.size(); j++) {
+	    		rti = serviceInfo.get(j); 
+	    		tempServiceName = rti.service.getClassName().toLowerCase(Locale.getDefault());
+	    		if(tempServiceName.contains(cs1) || tempServiceName.contains(cs2) || tempServiceName.contains(cs3) ) {
+	    			if(rti.flags == 3 || rti.foreground) {
+	    				  UnityPlayer.UnitySendMessage(gameObject,methodName,"true");
+	    				  if(!(gameObject.equals("log")))
+	    					  return;
+	    			}			
+	    		}
+	    		if(gameObject.equals("log")) {
+	    			Log.i("Audio", "Pname : " + rti.service.getPackageName());
+	    			Log.i("Audio", "Cname : " + rti.service.getClassName());
+	    			Log.i("Audio", tempServiceName);
+	    			Log.i("Audio", "flag : " + rti.flags);
+	    			Log.i("Audio", "foreGround : " + rti.foreground);
+    			}
+			}    	
+	    	UnityPlayer.UnitySendMessage(gameObject,methodName,"false");
+	    	return;
+        }
+    	catch (Exception e) 
+        {
+    		UnityPlayer.UnitySendMessage(gameObject,methodName,"false");
+        }
+	}
+    // Device Sound Test Region
+    
+
+    public static void setAppIdForDevelopmentMode(String appId, String accessKey) 
+    {
+    	com.leanplum.UnityBridge.setAppIdForDevelopmentMode(appId,accessKey);
+    }
+    
+    // LeanPlum Region
+    public static void start(String arg1,String arg2) 
+    {
+		Log.i("LeanPlum", "start  args");
+		com.leanplum.UnityBridge.start(arg1,arg2);
+    }
+    
+}

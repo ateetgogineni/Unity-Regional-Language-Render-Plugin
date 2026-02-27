@@ -1,0 +1,798 @@
+package com.purpletalk.MNR;
+
+import java.util.Currency;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import android.app.Activity;
+import android.app.ActivityManager;
+import android.app.ActivityManager.RunningServiceInfo;
+import android.content.Context;
+import android.os.Bundle;
+import android.util.DisplayMetrics;
+import android.util.Log;
+import com.unity3d.player.UnityPlayer;
+import com.leanplum.*;
+import com.leanplum.callbacks.ActionCallback;
+import com.leanplum.json.JsonConverter;
+
+
+public class MainActivity
+{
+    
+    // LeanPlum  Region  // Govinda Rajulu Yella Nov-08-2016 , last edited 16-Nov-2016
+
+    public static void defineFile(String name,String fileName) 
+    {
+    	try 
+        {	
+    		 Var.defineFile(name, fileName);
+        }
+    	catch (Exception e) 
+        {
+    		Log.i("LeanPlum", "defineFile exception  : " + e.getMessage());
+        }
+	}
+    
+    static ActionArgs addKeyValuesToArgs(String key , String value , Map<String, Object> jsonTypeData , ActionArgs args,String parentKey) 
+    {
+    	try 
+        {
+    		if(value == null)
+    			value = "";
+    		
+	    	Log.i("LeanPlum", "addKeyValuesToArgs  => key : " + key);
+			Log.i("LeanPlum", "addKeyValuesToArgs  => value : " + value);
+			
+	    	String typeValue = "";
+			if(jsonTypeData.containsKey(key)) {
+				Log.i("LeanPlum", "jsonTypeData  has  key");
+				typeValue = jsonTypeData.get(key).toString();
+			}
+			
+			if(typeValue.isEmpty()) {
+				if(isStringInt(value)) {
+					if(parentKey != null)
+						key = parentKey + "." + key;
+					Log.i("LeanPlum", "Int  => key : " + key + " value : "+ value);
+					args.with(key, Integer.parseInt(value));
+				}
+				else if(isStringDouble(value)) {
+					if(parentKey != null)
+						key = parentKey + "." + key;
+					Log.i("LeanPlum", "Double  => key : " + key + " value : "+ value);
+					args.with(key, Double.parseDouble(value));
+				}
+				else {
+					if(parentKey != null)
+						key = parentKey + "." + key;
+					Log.i("LeanPlum", "String  => key : " + key + " value : "+ value);
+					args.with(key,value);
+				}
+			}
+			else {
+				if(typeValue.equals("Action")) {
+					if(parentKey != null)
+						key = parentKey + "." + key;
+					Log.i("LeanPlum", "Action  => key : " + key + " value : "+ value);
+					args.withAction(key, value);
+				}
+				else if(typeValue.equals("Bool")) {
+					if(parentKey != null)
+						key = parentKey + "." + key;
+					Log.i("LeanPlum", "Bool  => key : " + key + " value : "+ value);
+					args.with(key, Boolean.getBoolean(value));
+				}
+				else if(typeValue.equals("File")) {
+					if(parentKey != null)
+						key = parentKey + "." + key;
+					Log.i("LeanPlum", "File => key : " + key + " value : "+ value);
+					args.withFile(key, value);
+				}
+				else if(typeValue.equals("Color")) {
+					if(parentKey != null)
+						key = parentKey + "." + key;
+					Log.i("LeanPlum", "Color  => key : " + key + " value : "+ hex2decimal(value));
+					args.withColor(key, hex2decimal(value));
+				}
+				else {
+					if(parentKey != null)
+						key = parentKey + "." + key;
+					Log.i("LeanPlum", "defalult string => key : " + key + " value : "+ value);
+					args.with(key, value);
+				}
+			}
+			return args;
+        }
+    	catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "checkJSONandAddToArgs exception : " + e.getMessage());
+        }
+    	return null;
+    }
+    
+    static boolean isStringInt(String s)
+    {
+        try
+        {
+            Integer.parseInt(s);
+            return true;
+        } catch (NumberFormatException ex)
+        {
+            return false;
+        }
+    }
+    
+    static boolean isStringDouble(String s)
+    {
+        try
+        {
+            Double.parseDouble(s);
+            return true;
+        } catch (NumberFormatException ex)
+        {
+            return false;
+        }
+    }
+    
+    static int hex2decimal(String s) {
+        String digits = "0123456789ABCDEF";
+        s =  s.toUpperCase(Locale.getDefault());
+        int val = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            int d = digits.indexOf(c);
+            val = 16*val + d;
+        }
+        return val;
+    }
+    
+    static ActionArgs checkJSONandAddToArgs(Map<String, Object> jsonData , Map<String, Object> jsonTypeData , ActionArgs args) {
+    	try 
+        {
+	    	if(args == null)
+	    		args = new ActionArgs();
+			for (String key : jsonData.keySet()) {
+				String value = jsonData.get(key).toString();
+				
+				Log.i("LeanPlum", "checkJSONandAddToArgs  => key : " + key);
+				Log.i("LeanPlum", "checkJSONandAddToArgs  => value : " + value);
+				
+				if(value.contains("=") && value.contains("{") && value.contains("}")) {
+					String tempValue = value.substring(value.indexOf("{") + 1);
+					tempValue = tempValue.substring(0,tempValue.length()-1);
+					Log.i("LeanPlum", "checkJSONandAddToArgs  => value will Splitt : " + tempValue);
+					String[] values = tempValue.split(",");
+					for (String word : values) {
+						String[] valuesIn = word.split("=");
+						String valueIn = "";
+						if(valuesIn.length > 1)
+							valueIn = valuesIn[1].trim();
+						args = addKeyValuesToArgs(valuesIn[0].trim(),valueIn,jsonTypeData,args,key);
+					}
+				}
+				else {
+					Log.i("LeanPlum", "checkJSONandAddToArgs  => value directly added : " + value);
+					args = addKeyValuesToArgs(key,value,jsonTypeData,args,null);
+				}
+			}
+			return args;
+        }
+    	catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "checkJSONandAddToArgs exception : " + e.getMessage());
+        }
+    	return null;
+    }
+    
+    static String decodeResponce(ActionContext arg0, Map<String, Object> jsonData, Map<String, Object> jsonTypeData) {
+    	try 
+        {
+    	
+    		 Map<String, Object> tempResponse = jsonData;
+    		 for (String key : jsonData.keySet()) {
+    			 String typeValue = "";
+    			 if(jsonTypeData.containsKey(key)) {
+    				Log.i("LeanPlum", "Responce jsonTypeData  has  key");
+    				typeValue = jsonTypeData.get(key).toString();
+    			}
+    			String value = jsonData.get(key).toString();
+    			if(typeValue.isEmpty()) {
+    				if(isStringInt(value)) {
+    					//parent key
+    					Log.i("LeanPlum", "Responce bfr Int  => key : " + key + " value : "+ value);
+    					tempResponse.put(key, arg0.numberNamed(key).intValue());
+    					Log.i("LeanPlum", "Responce Int  => key : " + key + " value : "+ arg0.numberNamed(key));
+    				}
+    				else if(isStringDouble(value)) {
+    					//parent key
+    					Log.i("LeanPlum", "Responce bfr Double  => key : " + key + " value : "+ value);
+    					tempResponse.put(key, arg0.numberNamed(key).doubleValue());
+    					Log.i("LeanPlum", "Responce Double  => key : " + key + " value : "+ arg0.numberNamed(key));
+    				}
+    				else {
+    					//parent key
+    					Log.i("LeanPlum", "Responce bfr String  => key : " + key + " value : "+ value);
+    					tempResponse.put(key, arg0.stringNamed(key));
+    					Log.i("LeanPlum", "Responce String  => key : " + key + " value : "+ arg0.stringNamed(key));
+    				}
+    			}
+    			else {
+    				if(typeValue.equals("Action")) {
+    					//parent key
+    					Log.i("LeanPlum", "Responce bfr Action  => key : " + key + " value : "+ value);
+    					tempResponse.put(key, arg0.objectNamed(key));
+    					Log.i("LeanPlum", "Responce Action  => key : " + key + " value : "+ arg0.objectNamed(key));
+    				}
+    				else if(typeValue.equals("Bool")) {
+    					//parent key
+    					Log.i("LeanPlum", "Responce bfr Bool  => key : " + key + " value : "+ value);
+    					tempResponse.put(key, arg0.booleanNamed(key));
+    					Log.i("LeanPlum", "Responce Bool  => key : " + key + " value : "+ arg0.booleanNamed(key));
+    				}
+    				else if(typeValue.equals("File")) {
+    					//parent key
+    					Log.i("LeanPlum", "Responce bfr File => key : " + key + " value : "+ value);
+    					tempResponse.put(key, arg0.objectNamed(key));
+    					Log.i("LeanPlum", "Responce File  => key : " + key + " value : "+ arg0.objectNamed(key));
+    				}
+    				else if(typeValue.equals("Color")) {
+    					//parent key
+    					String color = Integer.toHexString(arg0.numberNamed(key).intValue());
+    					Log.i("LeanPlum", "Responce bfr Color  => key : " + key + " value : "+ color);
+    					tempResponse.put(key, arg0.objectNamed(key));
+    					Log.i("LeanPlum", "Responce Color  => key : " + key + " value : "+ color);
+    				}
+    				else {
+    					//parent key
+    					Log.i("LeanPlum", "Responce bfr defalult string => key : " + key + " value : "+ value);
+    					tempResponse.put(key, arg0.stringNamed(key));
+    					Log.i("LeanPlum", "Responce defalult string  => key : " + key + " value : "+ arg0.stringNamed(key));
+    				}
+    			}
+    		 }
+    		tempResponse.put("MW_IAM_Name", arg0.actionName());
+    		String result = JsonConverter.toJson(tempResponse);
+    		Log.i("LeanPlum", "decodeResponce result : " + result);
+    		return result;
+        }
+    	catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "decodeResponce exception : " + e.getMessage());
+        }
+    	return null;
+    }
+    
+    
+    public static void InitializeIAMTemplate(String name, String data, String typedict, int kind ) 
+    {
+    	try 
+        {
+    		Log.i("LeanPlum", "InitializeIAMTemplate => name : " + name + " data : " + data + " typedict : " + typedict + " kind : " + kind);
+    		
+    		final Map<String, Object> jsonDataStatic = JsonConverter.fromJson(data);
+    		final Map<String, Object> jsonTypeDataStatic = JsonConverter.fromJson(typedict);
+    		
+    		ActionArgs args = checkJSONandAddToArgs(jsonDataStatic,jsonTypeDataStatic,null);
+    		
+    		ActionCallback responder = new ActionCallback() {
+				public boolean onResponse(ActionContext arg0) {
+					String actName = arg0.actionName();
+					Log.i("LeanPlum", "InitializeIAMTemplate responce => actName : " + actName);
+					String decodedJson = decodeResponce(arg0,jsonDataStatic,jsonTypeDataStatic);
+					Log.i("LeanPlum", "InitializeIAMTemplate decodedJson => : " + decodedJson);
+					String part1 = decodedJson.substring(0, (decodedJson.length() / 2));
+					String part2 = decodedJson.substring((decodedJson.length() / 2) + 1,decodedJson.length());
+					UnityPlayer.UnitySendMessage("MWLeanplumManager", "MessagePartialFirstArrived", part1);
+					UnityPlayer.UnitySendMessage("MWLeanplumManager", "MessagePartialSecondArrived", part2);
+					return true;
+				}
+			};
+			
+    		Leanplum.defineAction(name, kind, args, responder);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "InitializeIAMTemplate exception : " + e.getMessage());
+        }
+    }
+    
+    public static void MWreportLPActionProcessed(boolean isprocessed) 
+    {
+    	try 
+        {
+    		Log.i("LeanPlum", "MWreportLPActionProcessed => isprocessed : " + isprocessed);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "MWreportLPActionProcessed exception : " + e.getMessage());
+        }
+    }
+    
+    
+    	
+    public static void registerVarCallback(String Name) 
+    {
+    	try 
+        {
+    		UnityBridge.registerVarCallback(Name);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "registerVarCallback exception : " + e.getMessage());
+        }
+    }
+    	
+    public static String varNameComponents(String Name) 
+    {
+    	try 
+        {
+    		return UnityBridge.varNameComponents(Name);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "varNameComponents exception : " + e.getMessage());
+        }
+    	return null;
+    }	
+    	
+    public static String fileValue(String Name) 
+    {
+    	try 
+        {
+    		String value = UnityBridge.fileValue(Name);
+    		return value;
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "fileValue exception : " + e.getMessage());
+        }
+    	return null;
+    }	
+    	
+    public static String varValue(String Name) 
+    {
+    	try 
+        {
+    		String value = UnityBridge.varValue(Name);
+    		return value;
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "varValue exception : " + e.getMessage());
+        }
+    	return null;
+    }	
+    	
+    public static void setApiConnectionSettings(String hostName, String servletName,boolean useSSL) 
+    {
+    	try 
+        {
+    		UnityBridge.setApiConnectionSettings(hostName,servletName,useSSL);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "setApiConnectionSettings exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void setSocketConnectionSettings(String hostName, int port) 
+    {
+		try 
+        {
+			UnityBridge.setSocketConnectionSettings(hostName,port);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "setSocketConnectionSettings exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void setNetworkTimeout(int seconds, int downloadSeconds) 
+    {
+		try 
+        {
+			UnityBridge.setNetworkTimeout(seconds,downloadSeconds);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "setNetworkTimeout exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void setAppIdForDevelopmentMode(String appId, String accessKey) 
+    {
+		try 
+        {
+			UnityBridge.setAppIdForDevelopmentMode(appId,accessKey);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "setAppIdForDevelopmentMode exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void setAppIdForProductionMode(String appId, String accessKey) 
+    {
+		try 
+        {
+			UnityBridge.setAppIdForProductionMode(appId,accessKey);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "setAppIdForProductionMode exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void setDeviceId(String deviceId) 
+    {
+		try 
+        {
+			UnityBridge.setDeviceId(deviceId);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "setDeviceId exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void setTestModeEnabled(boolean testModeEnabled) 
+    {
+		try 
+        {
+			UnityBridge.setTestModeEnabled(testModeEnabled);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "setTestModeEnabled exception : " + e.getMessage());
+        }
+    } 	
+    	
+    public static void setFileUploadingEnabledInDevelopmentMode(boolean enabled) 
+    {
+		try 
+        {
+			UnityBridge.setFileUploadingEnabledInDevelopmentMode(enabled);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "setFileUploadingEnabledInDevelopmentMode exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void setGcmSenderId(String senderId) 
+    {
+		try 
+        {
+			UnityBridge.setGcmSenderId(senderId);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "setGcmSenderId exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void setGcmSenderIds(String senderIds) 
+    {
+		try 
+        {
+			UnityBridge.setGcmSenderIds(senderIds);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "setGcmSenderIds exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void initialize(String gameObjectName,String SDK_VERSION,String arg3) 
+    {
+		try 
+        {
+			UnityBridge.initialize(gameObjectName,SDK_VERSION,arg3);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "initialize exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void start(String arg1,String arg2) 
+    {
+		try 
+        {
+			UnityBridge.start(arg1,arg2);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "start exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void track(String arg1,double arg2,String arg3,String arg4) 
+    {
+		try 
+        {
+			UnityBridge.track(arg1,arg2,arg3,arg4);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "track exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void advanceTo(String arg1,String arg2,String arg3) 
+    {
+		try 
+        {
+			UnityBridge.advanceTo(arg1,arg2,arg3);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "advanceTo exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void setUserAttributes(String arg1,String arg2) 
+    {
+		try 
+        {
+			UnityBridge.setUserAttributes(arg1,arg2);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "setUserAttributes exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void pauseState() 
+    {
+		try 
+        {
+			UnityBridge.pauseState();
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "pauseState exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void resumeState() 
+    {
+		try 
+        {
+			UnityBridge.resumeState();
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "resumeState exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void forceContentUpdate() 
+    {
+		try 
+        {
+			UnityBridge.forceContentUpdate();
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "forceContentUpdate exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void forceContentUpdateWithCallback(int arg1) 
+    {
+		try 
+        {
+			UnityBridge.forceContentUpdateWithCallback(arg1);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "forceContentUpdateWithCallback exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static void defineVar(String arg1,String arg2,String arg3) 
+    {
+		try 
+        {
+			UnityBridge.defineVar(arg1,arg2,arg3);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "defineVar exception : " + e.getMessage());
+        }
+    }	
+    	
+    public static boolean hasStarted() 
+    {
+    	try 
+        {
+    		return UnityBridge.hasStarted();
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "hasStarted exception : " + e.getMessage());
+        }
+    	return false;
+    }
+	
+	public static boolean hasStartedAndRegisteredAsDeveloper() 
+    {
+		try 
+        {
+			return UnityBridge.hasStartedAndRegisteredAsDeveloper();
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "hasStartedAndRegisteredAsDeveloper exception : " + e.getMessage());
+        }
+    	return false;
+    }
+	
+	public static boolean isDeveloperModeEnabled() 
+    {
+		try 
+        {
+			return UnityBridge.isDeveloperModeEnabled();
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "isDeveloperModeEnabled exception : " + e.getMessage());
+        }
+    	return false;
+    }	
+    	
+	public static String objectForKeyPath(String arg1) 
+    {
+		try 
+        {
+			return UnityBridge.objectForKeyPath(arg1);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "objectForKeyPath exception : " + e.getMessage());
+        }
+    	return null;
+    }
+	
+	public static String objectForKeyPathComponents(String arg1) 
+    {
+		try 
+        {
+			return UnityBridge.objectForKeyPathComponents(arg1);
+        }
+        catch (Exception e) 
+        {
+        	Log.i("LeanPlum", "objectForKeyPathComponents exception : " + e.getMessage());
+        }
+    	return null;
+    }	
+	
+    // LeanPlum Region
+	
+	public static void onCreate (Bundle savedInstanceState) 
+	{
+		MainActivity.SetOrientation ();
+		getCountryName();
+    }
+	
+    private static void SetOrientation ()
+    {
+        Activity mActivity = UnityPlayer.currentActivity;
+       
+        if (MainActivity.isTablet (mActivity))
+        {
+            mActivity.setRequestedOrientation (0);
+            Log.i("Orientation", ">>>>>>>>>> Orientation changed to SCREEN_ORIENTATION_LANDSCAPE <<<<<<<<<<");
+        }
+        else 
+        {
+            mActivity.setRequestedOrientation (1);
+            Log.i("Orientation", ">>>>>>>>>> Orientation changed to SCREEN_ORIENTATION_PORTRAIT <<<<<<<<<<");
+        }
+    }
+    
+    private static Boolean isTablet (Activity activity)
+    {
+        try 
+        {
+            DisplayMetrics displayMetrics = new DisplayMetrics ();
+            activity.getWindowManager ().getDefaultDisplay ().getMetrics (displayMetrics);
+            double width = (double) displayMetrics.widthPixels;
+            double height = (double) displayMetrics.heightPixels;
+            double xDensity = (double) displayMetrics.xdpi;
+            double yDensity = (double) displayMetrics.ydpi;
+            double w = width / xDensity;
+            double h = height / yDensity;
+            double x = Math.pow (w, 2.0);
+            double y = Math.pow (h, 2.0);
+            double screenInches = Math.sqrt (x + y);
+            
+            Log.i("Screen", ">>>>>>>>>> Screen size (inches): " + Double.toString(screenInches) + " <<<<<<<<<<");
+            
+            if (screenInches > 6.0)
+            {
+                return true;
+            }
+            
+            return false;
+        }
+        catch (Exception e) 
+        {
+            return false;
+        }
+    }
+    
+ // Get Country Name  // Govinda Rajulu Yella Apr-14-2016
+    public static void getCountryName() {
+    	String country = UnityPlayer.currentActivity.getResources().getConfiguration().locale.getDisplayCountry();
+    	Log.i("country", ">>>>>>>>>> countryName <<<<<<<<<< : " + country);
+    	UnityPlayer.UnitySendMessage("SoundManager","CountryCode",country);
+    	Locale templocale = Locale.getDefault();
+    	Currency currency = Currency.getInstance(templocale);
+    	String currencyCode = currency.getDisplayName(templocale);
+    	Log.i("country", ">>>>>>>>>> currencyCode <<<<<<<<<< : " + currencyCode);
+    	UnityPlayer.UnitySendMessage("SoundManager","CurrencyCode",currencyCode);
+    }
+    
+    // Device Sound Test Region  // Govinda Rajulu Yella Feb-10-2016
+    public static void onWindowFocusChanged(boolean hasFocus) {
+    	checkNotificationDrag(hasFocus);
+		Log.i("Audio", ">>>>>>>>>> onWindowFocusChangedNew <<<<<<<<<< : " + hasFocus);
+		if(hasFocus) {
+			checkAudioIsPlaying("SoundManager","setAudioStateByNative");
+		}
+	}
+    
+    public static void checkNotificationDrag(boolean hasFocus) {
+    	if(hasFocus)
+    		UnityPlayer.UnitySendMessage("SocialKinesis","checkNotificationDragPause","false");
+    	else {
+    		UnityPlayer.UnitySendMessage("SocialKinesis","checkNotificationDragPause","true");
+    	}
+    }
+   
+    // Device Sound Test Region  // Govinda Rajulu Yella Feb-10-2016
+    public static void checkAudioIsPlaying(String gameObject,String methodName) 
+    {
+    	try 
+        {	
+    		CharSequence cs1 = "playbackservice";
+	    	CharSequence cs2 = "mediaplaybackservice";
+	    	CharSequence cs3 = "musicplaybackservice";
+	    	ActivityManager am= (ActivityManager) UnityPlayer.currentActivity.getSystemService(Context.ACTIVITY_SERVICE);   
+	    	List<RunningServiceInfo> serviceInfo = am.getRunningServices(75);
+	    	if(gameObject.equals("log"))
+	    		Log.i("Audio", ">>>>>>>>>> Service List Goes here <<<<<<<<<<");
+	    	String tempServiceName = "";
+	    	RunningServiceInfo rti;
+	    	for (int j = 0; j < serviceInfo.size(); j++) {
+	    		rti = serviceInfo.get(j); 
+	    		tempServiceName = rti.service.getClassName().toLowerCase(Locale.getDefault());
+	    		if(tempServiceName.contains(cs1) || tempServiceName.contains(cs2) || tempServiceName.contains(cs3) ) {
+	    			if(rti.flags == 3 || rti.foreground) {
+	    				  UnityPlayer.UnitySendMessage(gameObject,methodName,"true");
+	    				  if(!(gameObject.equals("log")))
+	    					  return;
+	    			}			
+	    		}
+	    		if(gameObject.equals("log")) {
+	    			Log.i("Audio", "Pname : " + rti.service.getPackageName());
+	    			Log.i("Audio", "Cname : " + rti.service.getClassName());
+	    			Log.i("Audio", tempServiceName);
+	    			Log.i("Audio", "flag : " + rti.flags);
+	    			Log.i("Audio", "foreGround : " + rti.foreground);
+    			}
+			}    	
+	    	UnityPlayer.UnitySendMessage(gameObject,methodName,"false");
+	    	return;
+        }
+    	catch (Exception e) 
+        {
+    		UnityPlayer.UnitySendMessage(gameObject,methodName,"false");
+        }
+	}
+    // Device Sound Test Region
+    
+}

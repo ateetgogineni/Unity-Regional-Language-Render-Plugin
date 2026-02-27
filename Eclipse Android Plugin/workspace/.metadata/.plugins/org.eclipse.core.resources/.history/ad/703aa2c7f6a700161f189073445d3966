@@ -1,0 +1,334 @@
+package com.purpletalk.MNR;
+
+import java.util.Currency;
+import java.util.List;
+import java.util.Locale;
+import android.app.Activity;
+import android.app.ActivityManager;
+import android.app.ActivityManager.RunningServiceInfo;
+import android.content.Context;
+import android.os.Bundle;
+import android.util.DisplayMetrics;
+import android.util.Log;
+import com.unity3d.player.UnityPlayer;
+import com.leanplum.UnityBridge;
+import com.leanplum.Var;
+
+
+public class MainActivity
+{
+	public static void onCreate (Bundle savedInstanceState) 
+	{
+		MainActivity.SetOrientation ();
+		getCountryName();
+    }
+	
+    private static void SetOrientation ()
+    {
+        Activity mActivity = UnityPlayer.currentActivity;
+       
+        if (MainActivity.isTablet (mActivity))
+        {
+            mActivity.setRequestedOrientation (0);
+            Log.i("Birla", ">>>>>>>>>> Orientation changed to SCREEN_ORIENTATION_LANDSCAPE <<<<<<<<<<");
+        }
+        else 
+        {
+            mActivity.setRequestedOrientation (1);
+            Log.i("Birla", ">>>>>>>>>> Orientation changed to SCREEN_ORIENTATION_PORTRAIT <<<<<<<<<<");
+        }
+    }
+    
+    private static Boolean isTablet (Activity activity)
+    {
+        try 
+        {
+            DisplayMetrics displayMetrics = new DisplayMetrics ();
+            activity.getWindowManager ().getDefaultDisplay ().getMetrics (displayMetrics);
+            double width = (double) displayMetrics.widthPixels;
+            double height = (double) displayMetrics.heightPixels;
+            double xDensity = (double) displayMetrics.xdpi;
+            double yDensity = (double) displayMetrics.ydpi;
+            double w = width / xDensity;
+            double h = height / yDensity;
+            double x = Math.pow (w, 2.0);
+            double y = Math.pow (h, 2.0);
+            double screenInches = Math.sqrt (x + y);
+            
+            Log.i("Birla", ">>>>>>>>>> Screen size (inches): " + Double.toString(screenInches) + " <<<<<<<<<<");
+            
+            if (screenInches > 6.0)
+            {
+                return true;
+            }
+            
+            return false;
+        }
+        catch (Exception e) 
+        {
+            return false;
+        }
+    }
+    
+ // Get Country Name  // Govinda Rajulu Yella Apr-14-2016
+    public static void getCountryName() {
+    	String country = UnityPlayer.currentActivity.getResources().getConfiguration().locale.getDisplayCountry();
+    	Log.i("country", ">>>>>>>>>> countryName <<<<<<<<<< : " + country);
+    	UnityPlayer.UnitySendMessage("SoundManager","CountryCode",country);
+    	Locale templocale = Locale.getDefault();
+    	Currency currency = Currency.getInstance(templocale);
+    	String currencyCode = currency.getDisplayName(templocale);
+    	Log.i("country", ">>>>>>>>>> currencyCode <<<<<<<<<< : " + currencyCode);
+    	UnityPlayer.UnitySendMessage("SoundManager","CurrencyCode",currencyCode);
+    }
+    
+    // Device Sound Test Region  // Govinda Rajulu Yella Feb-10-2016
+    public static void onWindowFocusChanged(boolean hasFocus) {
+    	checkNotificationDrag(hasFocus);
+		Log.i("Audio", ">>>>>>>>>> onWindowFocusChangedNew <<<<<<<<<< : " + hasFocus);
+		if(hasFocus) {
+			checkAudioIsPlaying("SoundManager","setAudioStateByNative");
+		}
+	}
+    
+    public static void checkNotificationDrag(boolean hasFocus) {
+    	if(hasFocus)
+    		UnityPlayer.UnitySendMessage("SocialKinesis","checkNotificationDragPause","false");
+    	else {
+    		UnityPlayer.UnitySendMessage("SocialKinesis","checkNotificationDragPause","true");
+    	}
+    }
+   
+    // Device Sound Test Region  // Govinda Rajulu Yella Feb-10-2016
+    public static void checkAudioIsPlaying(String gameObject,String methodName) 
+    {
+    	try 
+        {	
+    		CharSequence cs1 = "playbackservice";
+	    	CharSequence cs2 = "mediaplaybackservice";
+	    	CharSequence cs3 = "musicplaybackservice";
+	    	ActivityManager am= (ActivityManager) UnityPlayer.currentActivity.getSystemService(Context.ACTIVITY_SERVICE);   
+	    	List<RunningServiceInfo> serviceInfo = am.getRunningServices(75);
+	    	if(gameObject.equals("log"))
+	    		Log.i("Audio", ">>>>>>>>>> Service List Goes here <<<<<<<<<<");
+	    	String tempServiceName = "";
+	    	RunningServiceInfo rti;
+	    	for (int j = 0; j < serviceInfo.size(); j++) {
+	    		rti = serviceInfo.get(j); 
+	    		tempServiceName = rti.service.getClassName().toLowerCase(Locale.getDefault());
+	    		if(tempServiceName.contains(cs1) || tempServiceName.contains(cs2) || tempServiceName.contains(cs3) ) {
+	    			if(rti.flags == 3 || rti.foreground) {
+	    				  UnityPlayer.UnitySendMessage(gameObject,methodName,"true");
+	    				  if(!(gameObject.equals("log")))
+	    					  return;
+	    			}			
+	    		}
+	    		if(gameObject.equals("log")) {
+	    			Log.i("Audio", "Pname : " + rti.service.getPackageName());
+	    			Log.i("Audio", "Cname : " + rti.service.getClassName());
+	    			Log.i("Audio", tempServiceName);
+	    			Log.i("Audio", "flag : " + rti.flags);
+	    			Log.i("Audio", "foreGround : " + rti.foreground);
+    			}
+			}    	
+	    	UnityPlayer.UnitySendMessage(gameObject,methodName,"false");
+	    	return;
+        }
+    	catch (Exception e) 
+        {
+    		UnityPlayer.UnitySendMessage(gameObject,methodName,"false");
+        }
+	}
+    // Device Sound Test Region
+    
+public static Var<String> customVar;
+    
+    // LeanPlum  Region  // Govinda Rajulu Yella Nov-08-2016
+
+    public static void defineFile(String name,String fileName) 
+    {
+    	try 
+        {	
+    		Log.i("LeanPlum", "defineFile : " + name + " : " + fileName);
+    		customVar = Var.defineFile(name, fileName);
+    		//customVar.addValueChangedHandler(callback);
+    		Log.i("LeanPlum", "callback added ");
+    		
+        }
+    	catch (Exception e) 
+        {
+    		Log.i("LeanPlum", "exception  : " + e.getMessage());
+        }
+	}
+    	
+    	
+    	public static void registerVarCallback(String Name) 
+        {
+    		try 
+            {	
+    			Log.i("LeanPlum", "registerVarCallback");
+    			UnityBridge.registerVarCallback(Name);
+        		
+            }
+        	catch (Exception e) 
+            {
+        		Log.i("LeanPlum", "exception  : " + e.getMessage());
+            }
+    		 
+        }
+    	
+    	public static String varNameComponents(String Name) 
+        {
+    		 Log.i("LeanPlum", "varNameComponents");
+    		return UnityBridge.varNameComponents(Name);
+        }
+    	
+    	public static String fileValue(String Name) 
+        {
+    		String value = UnityBridge.fileValue(Name);
+    		Log.i("LeanPlum", "fileValue : " + value);
+    		return value;
+        }
+    	
+    	public static String varValue(String Name) 
+        {
+    		String value = UnityBridge.varValue(Name);
+    		Log.i("LeanPlum", "varValue : " + value);
+    		return value;
+        }
+    	
+    	public static void setApiConnectionSettings(String hostName, String servletName,boolean useSSL) 
+        {
+    		UnityBridge.setApiConnectionSettings(hostName,servletName,useSSL);
+        }
+    	
+    	public static void setSocketConnectionSettings(String hostName, int port) 
+        {
+    		UnityBridge.setSocketConnectionSettings(hostName,port);
+        }
+    	
+    	public static void setNetworkTimeout(int seconds, int downloadSeconds) 
+        {
+    		UnityBridge.setNetworkTimeout(seconds,downloadSeconds);
+        }
+    	
+    	public static void setAppIdForDevelopmentMode(String appId, String accessKey) 
+        {
+    		UnityBridge.setAppIdForDevelopmentMode(appId,accessKey);
+        }
+    	
+    	public static void setAppIdForProductionMode(String appId, String accessKey) 
+        {
+    		UnityBridge.setAppIdForProductionMode(appId,accessKey);
+        }
+    	
+    	public static void setDeviceId(String deviceId) 
+        {
+    		UnityBridge.setDeviceId(deviceId);
+        }
+    	
+    	public static void setTestModeEnabled(boolean testModeEnabled) 
+        {
+    		UnityBridge.setTestModeEnabled(testModeEnabled);
+        }
+    	
+    	public static void setFileUploadingEnabledInDevelopmentMode(boolean enabled) 
+        {
+    		UnityBridge.setFileUploadingEnabledInDevelopmentMode(enabled);
+        }
+    	
+    	public static void setGcmSenderId(String senderId) 
+        {
+    		UnityBridge.setGcmSenderId(senderId);
+        }
+    	
+    	public static void setGcmSenderIds(String senderIds) 
+        {
+    		UnityBridge.setGcmSenderIds(senderIds);
+        }
+    	
+    	public static void initialize(String gameObjectName,String SDK_VERSION,String arg3) 
+        {
+    		UnityBridge.initialize(gameObjectName,SDK_VERSION,arg3);
+        }
+    	
+    	public static void start(String arg1,String arg2) 
+        {
+    		Log.i("LeanPlum", "start  args");
+    		UnityBridge.start(arg1,arg2);
+        }
+    	
+    	public static void track(String arg1,double arg2,String arg3,String arg4) 
+        {
+    		Log.i("LeanPlum", "track  args");
+    		UnityBridge.track(arg1,arg2,arg3,arg4);
+        }
+    	
+    	public static void advanceTo(String arg1,String arg2,String arg3) 
+        {
+    		UnityBridge.advanceTo(arg1,arg2,arg3);
+        }
+    	
+    	public static void setUserAttributes(String arg1,String arg2) 
+        {
+    		UnityBridge.setUserAttributes(arg1,arg2);
+        }
+    	
+    	public static void pauseState() 
+        {
+    		UnityBridge.pauseState();
+        }
+    	
+    	public static void resumeState() 
+        {
+    		UnityBridge.resumeState();
+        }
+    	
+    	public static void forceContentUpdate() 
+        {
+    		UnityBridge.forceContentUpdate();
+        }
+    	
+    	public static void forceContentUpdateWithCallback(int arg1) 
+        {
+    		UnityBridge.forceContentUpdateWithCallback(arg1);
+        }
+    	
+    	public static void defineVar(String arg1,String arg2,String arg3) 
+        {
+    		UnityBridge.defineVar(arg1,arg2,arg3);
+        }
+    	
+    	public static boolean hasStarted() 
+        {
+    		Log.i("LeanPlum", "hasStarted " + UnityBridge.hasStarted());
+    		return UnityBridge.hasStarted();
+        }
+    	
+    	public static boolean hasStartedAndRegisteredAsDeveloper() 
+        {
+    		return UnityBridge.hasStartedAndRegisteredAsDeveloper();
+        }
+    	
+    	public static boolean isDeveloperModeEnabled() 
+        {
+    		return UnityBridge.isDeveloperModeEnabled();
+        }
+    	
+    	public static String objectForKeyPath(String arg1) 
+        {
+    		return UnityBridge.objectForKeyPath(arg1);
+        }
+    	
+    	public static String objectForKeyPathComponents(String arg1) 
+        {
+    		return UnityBridge.objectForKeyPathComponents(arg1);
+        }
+    	
+    
+    // LeanPlum Region
+    
+
+   
+    
+}

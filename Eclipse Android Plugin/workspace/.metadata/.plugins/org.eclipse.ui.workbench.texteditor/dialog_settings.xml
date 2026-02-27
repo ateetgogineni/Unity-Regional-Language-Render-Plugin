@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<item key="hasShownOverlayPopupBefore" value="true"/>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item key="DIALOG_WIDTH" value="245"/>
+		<item key="DIALOG_Y_ORIGIN" value="272"/>
+		<item key="DIALOG_HEIGHT" value="379"/>
+		<item key="DIALOG_X_ORIGIN" value="141"/>
+		<item key="DIALOG_FONT_NAME" value="1|.SF NS Text|11.0|0|COCOA|1|.SFNSText"/>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item key="wrap" value="false"/>
+		<item key="isRegEx" value="false"/>
+		<item key="casesensitive" value="false"/>
+		<item key="incremental" value="false"/>
+		<item key="wholeword" value="false"/>
+		<item key="selection" value=""/>
+		<list key="findhistory">
+			<item value="GLUtils"/>
+			<item value="GetImageFromGallery"/>
+			<item value="SaveImageToGallery"/>
+			<item value="SaveImage"/>
+			<item value="Crea"/>
+			<item value="Cre"/>
+			<item value="LoadImageAtPath"/>
+			<item value="lan"/>
+		</list>
+		<list key="replacehistory">
+		</list>
+	</section>
+	<section name="java.lang.Class">
+		<item key="replaceBarOpen" value="false"/>
+		<list key="findhistory">
+			<item value="printStackTrace"/>
+			<item value="staticlayout"/>
+			<item value="getTypefaceForStyle"/>
+			<item value="textPaint.setTypeface(getTypefaceForStyle(textStyle));&#x0A;"/>
+			<item value="getImageFromText"/>
+			<item value="canvas.save();&#x0A;"/>
+			<item value="verticalAlignment"/>
+			<item value="Bitmap bitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888);&#x0A;"/>
+			<item value="getAlignment"/>
+		</list>
+	</section>
+</section>
